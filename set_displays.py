@@ -47,11 +47,16 @@ def parse_monitors(monitors):
         is_builtin = bool(props.get("is-builtin", False))
         display_name = str(props.get("display-name", connector))
         mode = best_1080p_mode(modes)
+        # Store all modes as {(width, height): mode_id} for mirror resolution matching
+        modes_by_res = {}
+        for m in modes:
+            modes_by_res[(m[1], m[2])] = modes_by_res.get((m[1], m[2])) or m[0]
         result.append({
             "connector": connector,
             "display_name": display_name,
             "is_builtin": is_builtin,
             "mode": mode,
+            "modes_by_res": modes_by_res,
         })
     return result
 
@@ -74,11 +79,18 @@ def cmd_list(monitors):
 
 
 def cmd_mirror(proxy, serial, monitors):
-    builtin = next((m for m in monitors if m["is_builtin"]), monitors[0])
-    common_mode = builtin["mode"]
-    logical = [lm(0, 0, m["is_builtin"], [dict(m, mode=common_mode)]) for m in monitors]
+    # Find the highest resolution supported by all displays
+    common_res = set.intersection(*[set(m["modes_by_res"]) for m in monitors])
+    if not common_res:
+        print("No common resolution found across all displays.")
+        return
+    w, h = max(common_res, key=lambda r: (r[0] * r[1]))
+
+    # All physical monitors go in a single logical monitor — that's how Mutter mirrors them
+    monitor_entries = [(m["connector"], m["modes_by_res"][(w, h)], {}) for m in monitors]
+    logical = [(0, 0, 1.0, 0, True, monitor_entries)]
     apply_config(proxy, serial, logical)
-    print(f"Mirroring {len(monitors)} display(s) at {common_mode}.")
+    print(f"Mirroring {len(monitors)} display(s) at {w}x{h}.")
 
 
 def cmd_stack(proxy, serial, monitors, external_above=True):
