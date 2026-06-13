@@ -5,8 +5,10 @@ Configure displays on GNOME Wayland via the Mutter DBus API. Works where `xrandr
 ## Requirements
 
 ```bash
-sudo apt install python3-dbus
+sudo apt install python3-gi
 ```
+
+`python3-gi` is usually pre-installed on Ubuntu GNOME.
 
 ## Usage
 
