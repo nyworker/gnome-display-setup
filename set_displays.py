@@ -40,6 +40,11 @@ def best_1080p_mode(modes):
     return max(modes, key=score)[0]
 
 
+def best_native_mode(modes):
+    """Return the mode ID with the highest resolution and refresh rate (native)."""
+    return max(modes, key=lambda m: (m[1] * m[2], m[3]))[0]
+
+
 def parse_monitors(monitors):
     result = []
     for spec, modes, props in monitors:
@@ -56,6 +61,7 @@ def parse_monitors(monitors):
             "display_name": display_name,
             "is_builtin": is_builtin,
             "mode": mode,
+            "native_mode": best_native_mode(modes),
             "modes_by_res": modes_by_res,
         })
     return result
@@ -128,6 +134,7 @@ def cmd_laptop_only(proxy, serial, monitors):
     if not builtin:
         print("No built-in display found.")
         return
+    builtin = {**builtin, "mode": builtin["native_mode"]}
     apply_config(proxy, serial, [lm(0, 0, True, [builtin])])
     print(f"Laptop-only: {builtin['connector']} at {builtin['mode']}.")
 
